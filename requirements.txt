@@ -4,3 +4,4 @@ pyarrow
 db-dtypes
 tqdm
 jupyter
+pytest

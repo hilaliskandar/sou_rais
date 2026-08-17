@@ -1,11 +1,12 @@
+import argparse
 from pathlib import Path
 
 from tqdm.auto import tqdm
 
 from sou_rais import (
     carregar_config, cliente_bigquery, estimar_bytes, filtrar_strings,
-    formatar_gb, gravar_parquet_atomico, lotes, manifestar, sha256,
-    validar_municipios_retornados,
+    formatar_gb, gravar_parquet_atomico, lotes, manifestar, plano_resumo,
+    salvar_plano, sha256, validar_municipios_retornados,
 )
 
 
@@ -52,7 +53,7 @@ LEFT JOIN sm USING (cnpj_basico)
 """
 
 
-def main():
+def main(dry_run: bool = False):
     cfg = carregar_config(Path.cwd())
     bq = cliente_bigquery()
     grupos = lotes(cfg.municipios, cfg.lote_tamanho)
@@ -72,6 +73,25 @@ def main():
     if not snapshots:
         raise RuntimeError("Nenhum snapshot CNPJ selecionado.")
 
+    if dry_run:
+        total_bytes = 0
+        indisponivel = False
+        for snapshot in snapshots:
+            n = estimar_bytes(bq, sql_snapshot(snapshot, cfg.municipios))
+            if n is None:
+                indisponivel = True
+            else:
+                total_bytes += n
+        plano = plano_resumo(
+            "CNPJ", len(snapshots), len(grupos), len(snapshots),
+            len(snapshots) * len(grupos), None if indisponivel else total_bytes,
+        )
+        path = salvar_plano(cfg, "cnpj", [plano])
+        print(plano)
+        print("DRY-RUN: nenhum microdado foi baixado.")
+        print("Plano salvo em", path)
+        return
+
     for snapshot in tqdm(snapshots, desc="CNPJ snapshots"):
         outs = [
             cfg.processado_dir / "cnpj" / f"cnpj_lote{i:02d}_{snapshot}.parquet"
@@ -87,20 +107,33 @@ def main():
         if df.empty:
             raise RuntimeError(f"Snapshot {snapshot} retornou zero linhas.")
         df["id_municipio"] = df["id_municipio"].astype(str)
-        validar_municipios_retornados(df, cfg.municipios)
+        faltantes_snapshot = validar_municipios_retornados(
+            df, cfg.municipios, cfg.validacao_municipios,
+            contexto=f"CNPJ {snapshot}",
+        )
 
         for i, ids in enumerate(grupos, 1):
             out = outs[i - 1]
             if out.exists() and not cfg.sobrescrever:
                 continue
             dg = df[df["id_municipio"].isin(ids)].copy()
-            validar_municipios_retornados(dg, ids)
+            faltantes = validar_municipios_retornados(
+                dg, ids, cfg.validacao_municipios,
+                contexto=f"CNPJ {snapshot} lote {i:02d}",
+            )
             gravar_parquet_atomico(dg, out)
-            manifestar(cfg, base="CNPJ", tipo="snapshot", lote=i, periodo=snapshot,
-                       arquivo=out.relative_to(cfg.root), linhas=len(dg), sha256=sha256(out))
+            manifestar(
+                cfg, base="CNPJ", tipo="snapshot", lote=i, periodo=snapshot,
+                arquivo=out.relative_to(cfg.root), linhas=len(dg), sha256=sha256(out),
+                municipios_faltantes="|".join(faltantes),
+                municipios_faltantes_snapshot="|".join(faltantes_snapshot),
+            )
 
     print("CNPJ concluído em", cfg.processado_dir / "cnpj")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Baixa snapshots CNPJ para municípios selecionados.")
+    parser.add_argument("--dry-run", action="store_true", help="Descobre snapshots e estima processamento sem baixar microdados.")
+    args = parser.parse_args()
+    main(dry_run=args.dry_run)

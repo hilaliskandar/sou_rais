@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sou-rais"
+version = "0.1.0"
+description = "Aquisição reproduzível de RAIS, Novo CAGED e snapshots do CNPJ por municípios"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "google-cloud-bigquery",
+  "pandas",
+  "pyarrow",
+  "db-dtypes",
+  "tqdm"
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "jupyter"]
+
+[project.scripts]
+sou-rais = "sou_rais_cli:main"
+
+[tool.setuptools]
+py-modules = ["sou_rais", "sou_rais_cli"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

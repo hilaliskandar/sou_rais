@@ -1,34 +1,23 @@
 # sou_rais
 
-Notebooks e scripts reproduzíveis para consulta local de RAIS, Novo CAGED e snapshots do CNPJ a partir das tabelas públicas da Base dos Dados no BigQuery.
+Notebooks, scripts e uma CLI reproduzível para consulta local de RAIS, Novo CAGED e snapshots do CNPJ a partir das tabelas públicas da Base dos Dados no BigQuery.
 
 ## Objetivo
 
-O projeto foi estruturado para permitir que qualquer usuário selecione um conjunto arbitrário de municípios por código IBGE, escolha períodos de interesse e reproduza localmente a aquisição e o inventário das bases sem depender de Google Drive, Google Colab ou caminhos pessoais.
+O projeto permite selecionar qualquer conjunto de municípios por código IBGE, escolher períodos de interesse e reproduzir localmente a aquisição, validação e inventário das bases sem depender de Google Drive, Google Colab ou caminhos pessoais.
 
-## Princípios
+## Instalação
 
-- nenhuma dependência de Google Drive ou Google Colab;
-- nenhum município ou projeto de cobrança fixado no código;
-- seleção de municípios por `municipios.csv` ou lista inline no notebook de configuração;
-- configuração central opcional em `config.json`;
-- códigos IBGE municipais de 7 dígitos;
-- seleção opcional de período para RAIS, Novo CAGED e CNPJ;
-- execução incremental com reaproveitamento de Parquets existentes;
-- modo `--dry-run` para descobrir cobertura e estimar processamento sem baixar microdados;
-- estimativa de bytes processados antes das consultas quando disponível;
-- validação municipal configurável em `strict`, `warning` ou `off`;
-- gravação atômica em Parquet com compressão Snappy;
-- manifesto de execução com número de linhas, municípios ausentes e SHA-256;
-- CNPJ tratado explicitamente como snapshots administrativos;
-- Novo CAGED mantido separado dos regimes históricos anteriores a 2020.
-
-## Preparação
-
-Crie um ambiente Python e instale:
+Crie um ambiente Python e instale o projeto em modo editável:
 
 ```bash
-pip install -r requirements.txt
+pip install -e ".[dev]"
+```
+
+Isso instala também o comando:
+
+```bash
+sou-rais
 ```
 
 É necessário ter credenciais Google Cloud disponíveis para o BigQuery, por exemplo:
@@ -51,7 +40,7 @@ $env:BIGQUERY_PROJECT="seu-projeto-gcp"
 
 ## Municípios
 
-Copie `municipios.exemplo.csv` para `municipios.csv` e substitua os códigos pelos municípios desejados:
+Copie `municipios.exemplo.csv` para `municipios.csv` e substitua pelos municípios desejados:
 
 ```csv
 id_municipio,nome
@@ -61,19 +50,9 @@ id_municipio,nome
 
 Apenas `id_municipio` é obrigatório. Os códigos devem ter 7 dígitos.
 
-Também é possível preencher `MUNICIPIOS_INLINE` em `00_configurar_municipios.ipynb` quando não existir `municipios.csv`.
-
 ## Configuração central
 
-Copie:
-
-```bash
-cp config.exemplo.json config.json
-```
-
-No Windows, basta duplicar o arquivo manualmente.
-
-Campos disponíveis:
+Copie `config.exemplo.json` para `config.json`.
 
 ```json
 {
@@ -91,58 +70,93 @@ Campos disponíveis:
 }
 ```
 
-Exemplos:
-
-- RAIS de 2010 a 2025: `ano_inicial=2010`, `ano_final=2025`;
-- Novo CAGED de `2022-01` a `2025-12`;
-- CNPJ entre dois snapshots, usando datas no formato `AAAA-MM-DD`.
-
 Valores `null` significam utilizar toda a cobertura descoberta na fonte.
 
-### Validação municipal
+`validacao_municipios` aceita:
 
-`validacao_municipios` controla o comportamento quando um código configurado não aparece em determinada partição:
+- `strict`: ausência de município interrompe a execução;
+- `warning`: registra aviso e continua;
+- `off`: desativa a verificação.
 
-- `strict`: interrompe a execução;
-- `warning`: registra um aviso e continua;
-- `off`: não testa presença municipal.
+O padrão público é `warning`.
 
-O padrão público é `warning`, pois ausência de registros pode ser legítima em períodos antigos, municípios pequenos ou determinados recortes administrativos. Para auditorias de integridade, use `strict`.
+## CLI
 
-Os municípios ausentes são registrados em `manifesto_execucoes.csv` quando a execução continua.
+Depois de `pip install -e ".[dev]"`, o fluxo principal pode ser feito sem abrir notebooks.
+
+Verifique a configuração e o ambiente:
+
+```bash
+sou-rais doctor
+sou-rais config
+```
+
+Planeje toda a aquisição sem baixar microdados:
+
+```bash
+sou-rais plan
+```
+
+Ou por base:
+
+```bash
+sou-rais plan rais
+sou-rais plan caged
+sou-rais plan cnpj
+```
+
+Baixe uma base:
+
+```bash
+sou-rais download rais
+sou-rais download caged
+sou-rais download cnpj
+```
+
+Ou todas em sequência:
+
+```bash
+sou-rais download all
+```
+
+Também é possível usar dry-run no próprio comando de download:
+
+```bash
+sou-rais download all --dry-run
+```
+
+Valide e indexe os Parquets locais:
+
+```bash
+sou-rais validate
+```
+
+Ajuda e versão:
+
+```bash
+sou-rais --help
+sou-rais --version
+```
 
 ## Dry-run
 
-Antes de baixar microdados, é recomendável executar:
+O dry-run:
 
-```bash
-python scripts/baixar_rais.py --dry-run
-python scripts/baixar_novo_caged.py --dry-run
-python scripts/baixar_cnpj.py --dry-run
-```
-
-O `dry-run`:
-
-- consulta apenas a cobertura temporal necessária para montar o plano;
-- faz dry-run das consultas BigQuery para estimar bytes processados quando o serviço retorna essa informação;
-- informa número de consultas BigQuery previstas;
+- descobre a cobertura temporal disponível;
+- aplica os filtros de período do `config.json`;
+- estima bytes processados no BigQuery quando disponível;
+- informa número de consultas previstas;
 - informa número de partições locais previstas;
-- não baixa os microdados;
+- não baixa microdados;
 - não cria Parquets de dados.
 
-Os planos são salvos em:
+Os planos são salvos em `dados/controle`.
 
-```text
-dados/controle/plano_rais.csv
-dados/controle/plano_novo_caged.csv
-dados/controle/plano_cnpj.csv
-```
-
-No CNPJ, a quantidade de consultas BigQuery é igual ao número de snapshots selecionados, independentemente do número de lotes locais: cada snapshot é consultado uma única vez para todo o conjunto municipal e depois dividido localmente.
+No CNPJ, cada snapshot gera uma única consulta BigQuery para todo o conjunto municipal. A divisão por lotes ocorre localmente.
 
 ## Uso pelos notebooks
 
-Ordem sugerida:
+Os notebooks permanecem disponíveis como camada interativa:
 
 1. `00_configurar_municipios.ipynb`
 2. `10_rais.ipynb`
@@ -150,11 +164,11 @@ Ordem sugerida:
 4. `30_cnpj.ipynb`
 5. `40_validar_e_indexar.ipynb`
 
-Os notebooks são deliberadamente finos: a lógica principal fica em `sou_rais.py` e em `scripts/`, facilitando manutenção, testes e uso fora do Jupyter.
+A lógica principal fica em `sou_rais.py` e em `scripts/`.
 
-## Uso pela linha de comando
+## Uso direto dos scripts
 
-As rotinas podem ser executadas sem Jupyter:
+Também é possível executar:
 
 ```bash
 python scripts/baixar_rais.py
@@ -194,7 +208,7 @@ Cada partição criada registra no manifesto:
 - período ou snapshot;
 - caminho relativo;
 - número de linhas;
-- municípios configurados que não apareceram naquela partição;
+- municípios ausentes, quando aplicável;
 - SHA-256.
 
 O validador lê os metadados Parquet sem carregar os microdados completos e detecta arquivos vazios, nomes fora do padrão e lotes incompatíveis com a configuração atual.
@@ -224,4 +238,4 @@ Execute:
 pytest -q
 ```
 
-O repositório também possui workflow de GitHub Actions para executar os testes básicos automaticamente em pushes e pull requests.
+O GitHub Actions executa os testes automaticamente em pushes e pull requests.

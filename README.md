@@ -15,10 +15,11 @@ O projeto foi estruturado para permitir que qualquer usuário selecione um conju
 - códigos IBGE municipais de 7 dígitos;
 - seleção opcional de período para RAIS, Novo CAGED e CNPJ;
 - execução incremental com reaproveitamento de Parquets existentes;
+- modo `--dry-run` para descobrir cobertura e estimar processamento sem baixar microdados;
 - estimativa de bytes processados antes das consultas quando disponível;
-- validação dos municípios efetivamente retornados;
+- validação municipal configurável em `strict`, `warning` ou `off`;
 - gravação atômica em Parquet com compressão Snappy;
-- manifesto de execução com número de linhas e SHA-256;
+- manifesto de execução com número de linhas, municípios ausentes e SHA-256;
 - CNPJ tratado explicitamente como snapshots administrativos;
 - Novo CAGED mantido separado dos regimes históricos anteriores a 2020.
 
@@ -85,7 +86,8 @@ Campos disponíveis:
   "snapshot_inicial": null,
   "snapshot_final": null,
   "estimar_custo": true,
-  "sobrescrever": false
+  "sobrescrever": false,
+  "validacao_municipios": "warning"
 }
 ```
 
@@ -96,6 +98,47 @@ Exemplos:
 - CNPJ entre dois snapshots, usando datas no formato `AAAA-MM-DD`.
 
 Valores `null` significam utilizar toda a cobertura descoberta na fonte.
+
+### Validação municipal
+
+`validacao_municipios` controla o comportamento quando um código configurado não aparece em determinada partição:
+
+- `strict`: interrompe a execução;
+- `warning`: registra um aviso e continua;
+- `off`: não testa presença municipal.
+
+O padrão público é `warning`, pois ausência de registros pode ser legítima em períodos antigos, municípios pequenos ou determinados recortes administrativos. Para auditorias de integridade, use `strict`.
+
+Os municípios ausentes são registrados em `manifesto_execucoes.csv` quando a execução continua.
+
+## Dry-run
+
+Antes de baixar microdados, é recomendável executar:
+
+```bash
+python scripts/baixar_rais.py --dry-run
+python scripts/baixar_novo_caged.py --dry-run
+python scripts/baixar_cnpj.py --dry-run
+```
+
+O `dry-run`:
+
+- consulta apenas a cobertura temporal necessária para montar o plano;
+- faz dry-run das consultas BigQuery para estimar bytes processados quando o serviço retorna essa informação;
+- informa número de consultas BigQuery previstas;
+- informa número de partições locais previstas;
+- não baixa os microdados;
+- não cria Parquets de dados.
+
+Os planos são salvos em:
+
+```text
+dados/controle/plano_rais.csv
+dados/controle/plano_novo_caged.csv
+dados/controle/plano_cnpj.csv
+```
+
+No CNPJ, a quantidade de consultas BigQuery é igual ao número de snapshots selecionados, independentemente do número de lotes locais: cada snapshot é consultado uma única vez para todo o conjunto municipal e depois dividido localmente.
 
 ## Uso pelos notebooks
 
@@ -111,7 +154,7 @@ Os notebooks são deliberadamente finos: a lógica principal fica em `sou_rais.p
 
 ## Uso pela linha de comando
 
-As mesmas rotinas podem ser executadas sem Jupyter:
+As rotinas podem ser executadas sem Jupyter:
 
 ```bash
 python scripts/baixar_rais.py
@@ -133,7 +176,10 @@ dados/
 └── controle/
     ├── manifesto_execucoes.csv
     ├── indice_particoes.csv
-    └── indice_particoes_fora_padrao.csv
+    ├── indice_particoes_fora_padrao.csv
+    ├── plano_rais.csv
+    ├── plano_novo_caged.csv
+    └── plano_cnpj.csv
 ```
 
 A pasta `dados/` permanece fora do Git por padrão.
@@ -148,6 +194,7 @@ Cada partição criada registra no manifesto:
 - período ou snapshot;
 - caminho relativo;
 - número de linhas;
+- municípios configurados que não apareceram naquela partição;
 - SHA-256.
 
 O validador lê os metadados Parquet sem carregar os microdados completos e detecta arquivos vazios, nomes fora do padrão e lotes incompatíveis com a configuração atual.
@@ -168,8 +215,6 @@ Consulte a documentação oficial do Ministério do Trabalho e Emprego, da Recei
 ## Observações metodológicas
 
 RAIS é uma base anual de estoque e declaração. Novo CAGED é uma base de movimentações mensais e não deve ser emendado automaticamente ao regime histórico anterior a 2020. Os arquivos CNPJ representam snapshots administrativos em datas específicas e não equivalem a uma série anual de emprego ou de empresas ativas sem tratamento metodológico adicional.
-
-A validação de presença municipal é estrita: se um município configurado não retornar registros em uma partição consultada, a execução é interrompida. Para períodos muito antigos ou bases em que ausência de registros possa ser legítima, esse comportamento deve ser avaliado antes da execução ampla.
 
 ## Testes
 

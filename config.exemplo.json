@@ -8,5 +8,6 @@
   "snapshot_inicial": null,
   "snapshot_final": null,
   "estimar_custo": true,
-  "sobrescrever": false
+  "sobrescrever": false,
+  "validacao_municipios": "warning"
 }

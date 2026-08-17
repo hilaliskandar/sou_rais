@@ -1,0 +1,12 @@
+{
+  "arquivo_municipios": "municipios.csv",
+  "lote_tamanho": 5,
+  "ano_inicial": null,
+  "ano_final": null,
+  "competencia_inicial": null,
+  "competencia_final": null,
+  "snapshot_inicial": null,
+  "snapshot_final": null,
+  "estimar_custo": true,
+  "sobrescrever": false
+}

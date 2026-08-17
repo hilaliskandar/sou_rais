@@ -4,6 +4,7 @@ import csv
 import hashlib
 import json
 import os
+import warnings
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -11,6 +12,8 @@ from typing import Iterable
 
 import pandas as pd
 from google.cloud import bigquery
+
+VALIDATION_MODES = {"strict", "warning", "off"}
 
 
 @dataclass(frozen=True)
@@ -26,6 +29,7 @@ class Config:
     snapshot_final: str | None = None
     estimar_custo: bool = True
     sobrescrever: bool = False
+    validacao_municipios: str = "warning"
 
     @property
     def data_dir(self) -> Path:
@@ -73,6 +77,9 @@ def carregar_config(root: Path | None = None, inline: Iterable[str] | None = Non
     if cfg_path.exists():
         raw = json.loads(cfg_path.read_text(encoding="utf-8"))
     ids = carregar_municipios(root, inline=inline, arquivo=raw.get("arquivo_municipios", "municipios.csv"))
+    modo = str(raw.get("validacao_municipios", "warning")).strip().lower()
+    if modo not in VALIDATION_MODES:
+        raise ValueError(f"validacao_municipios deve ser um de {sorted(VALIDATION_MODES)}")
     cfg = Config(
         root=root,
         municipios=ids,
@@ -85,6 +92,7 @@ def carregar_config(root: Path | None = None, inline: Iterable[str] | None = Non
         snapshot_final=raw.get("snapshot_final"),
         estimar_custo=bool(raw.get("estimar_custo", True)),
         sobrescrever=bool(raw.get("sobrescrever", False)),
+        validacao_municipios=modo,
     )
     if cfg.lote_tamanho < 1:
         raise ValueError("lote_tamanho deve ser >= 1")
@@ -131,13 +139,51 @@ def filtrar_strings(valores: Iterable[str], inicio: str | None, fim: str | None)
     return out
 
 
-def validar_municipios_retornados(df: pd.DataFrame, esperados: Iterable[str]) -> None:
+def municipios_faltantes(df: pd.DataFrame, esperados: Iterable[str]) -> list[str]:
     if "id_municipio" not in df.columns:
         raise ValueError("A consulta não retornou a coluna id_municipio.")
     encontrados = set(df["id_municipio"].dropna().astype(str).unique())
-    faltantes = sorted(set(str(x) for x in esperados) - encontrados)
-    if faltantes:
-        raise RuntimeError(f"Municípios esperados sem registros na partição: {faltantes}")
+    return sorted(set(str(x) for x in esperados) - encontrados)
+
+
+def validar_municipios_retornados(
+    df: pd.DataFrame,
+    esperados: Iterable[str],
+    modo: str = "warning",
+    contexto: str | None = None,
+) -> list[str]:
+    modo = str(modo).strip().lower()
+    if modo not in VALIDATION_MODES:
+        raise ValueError(f"Modo de validação inválido: {modo}")
+    if modo == "off":
+        return []
+    faltantes = municipios_faltantes(df, esperados)
+    if not faltantes:
+        return []
+    prefixo = f"{contexto}: " if contexto else ""
+    msg = f"{prefixo}municípios sem registros na partição: {faltantes}"
+    if modo == "strict":
+        raise RuntimeError(msg)
+    warnings.warn(msg, RuntimeWarning, stacklevel=2)
+    return faltantes
+
+
+def plano_resumo(base: str, itens: int, lotes_n: int, consultas: int, particoes: int, bytes_estimados: int | None) -> dict:
+    return {
+        "base": base,
+        "itens_temporais": int(itens),
+        "lotes": int(lotes_n),
+        "consultas_bigquery": int(consultas),
+        "particoes_previstas": int(particoes),
+        "bytes_estimados": bytes_estimados,
+        "gb_estimados": formatar_gb(bytes_estimados),
+    }
+
+
+def salvar_plano(cfg: Config, nome: str, rows: list[dict]) -> Path:
+    path = cfg.controle_dir / f"plano_{nome}.csv"
+    pd.DataFrame(rows).to_csv(path, index=False)
+    return path
 
 
 def sha256(path: Path, chunk: int = 1024 * 1024) -> str:

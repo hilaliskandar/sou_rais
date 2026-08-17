@@ -1,0 +1,304 @@
+Metadata-Version: 2.4
+Name: sou-rais
+Version: 0.1.0
+Summary: Aquisição reproduzível de RAIS, Novo CAGED e snapshots do CNPJ por municípios
+License: MIT License
+        
+        Copyright (c) 2026 sou_rais contributors
+        
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+        
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+        
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+        
+Project-URL: Homepage, https://github.com/hilaliskandar/sou_rais
+Project-URL: Repository, https://github.com/hilaliskandar/sou_rais
+Project-URL: Issues, https://github.com/hilaliskandar/sou_rais/issues
+Project-URL: Changelog, https://github.com/hilaliskandar/sou_rais/blob/main/CHANGELOG.md
+Keywords: RAIS,CAGED,CNPJ,BigQuery,Brasil,mercado de trabalho,dados públicos
+Classifier: Development Status :: 3 - Alpha
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Information Analysis
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: google-cloud-bigquery
+Requires-Dist: pandas
+Requires-Dist: pyarrow
+Requires-Dist: db-dtypes
+Requires-Dist: tqdm
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Requires-Dist: jupyter; extra == "dev"
+Requires-Dist: build; extra == "dev"
+Requires-Dist: twine; extra == "dev"
+Dynamic: license-file
+
+# sou_rais
+
+Notebooks, scripts e uma CLI reproduzível para consulta local de RAIS, Novo CAGED e snapshots do CNPJ a partir das tabelas públicas da Base dos Dados no BigQuery.
+
+Versão atual do código: `0.1.0`.
+
+## Objetivo
+
+O projeto permite selecionar qualquer conjunto de municípios por código IBGE, escolher períodos de interesse e reproduzir localmente a aquisição, validação e inventário das bases sem depender de Google Drive, Google Colab ou caminhos pessoais.
+
+## Instalação
+
+Clone o repositório, crie um ambiente Python e instale o projeto em modo editável:
+
+```bash
+pip install -e ".[dev]"
+```
+
+Isso instala também o comando:
+
+```bash
+sou-rais
+```
+
+É necessário ter credenciais Google Cloud disponíveis para o BigQuery, por exemplo:
+
+```bash
+gcloud auth application-default login
+```
+
+Defina o projeto usado para cobrança das consultas:
+
+```bash
+export BIGQUERY_PROJECT=seu-projeto-gcp
+```
+
+No Windows PowerShell:
+
+```powershell
+$env:BIGQUERY_PROJECT="seu-projeto-gcp"
+```
+
+## Municípios
+
+Copie `municipios.exemplo.csv` para `municipios.csv` e substitua pelos municípios desejados:
+
+```csv
+id_municipio,nome
+3516408,Franco da Rocha
+3525904,Jundiai
+```
+
+Apenas `id_municipio` é obrigatório. Os códigos devem ter 7 dígitos.
+
+## Configuração central
+
+Copie `config.exemplo.json` para `config.json`.
+
+```json
+{
+  "arquivo_municipios": "municipios.csv",
+  "lote_tamanho": 5,
+  "ano_inicial": null,
+  "ano_final": null,
+  "competencia_inicial": null,
+  "competencia_final": null,
+  "snapshot_inicial": null,
+  "snapshot_final": null,
+  "estimar_custo": true,
+  "sobrescrever": false,
+  "validacao_municipios": "warning"
+}
+```
+
+Valores `null` significam utilizar toda a cobertura descoberta na fonte.
+
+`validacao_municipios` aceita:
+
+- `strict`: ausência de município interrompe a execução;
+- `warning`: registra aviso e continua;
+- `off`: desativa a verificação.
+
+O padrão público é `warning`.
+
+## CLI
+
+Depois de `pip install -e ".[dev]"`, o fluxo principal pode ser feito sem abrir notebooks.
+
+Verifique a configuração e o ambiente:
+
+```bash
+sou-rais doctor
+sou-rais config
+```
+
+Planeje toda a aquisição sem baixar microdados:
+
+```bash
+sou-rais plan
+```
+
+Ou por base:
+
+```bash
+sou-rais plan rais
+sou-rais plan caged
+sou-rais plan cnpj
+```
+
+Baixe uma base:
+
+```bash
+sou-rais download rais
+sou-rais download caged
+sou-rais download cnpj
+```
+
+Ou todas em sequência:
+
+```bash
+sou-rais download all
+```
+
+Também é possível usar dry-run no próprio comando de download:
+
+```bash
+sou-rais download all --dry-run
+```
+
+Valide e indexe os Parquets locais:
+
+```bash
+sou-rais validate
+```
+
+Ajuda e versão:
+
+```bash
+sou-rais --help
+sou-rais --version
+```
+
+## Dry-run
+
+O dry-run:
+
+- descobre a cobertura temporal disponível;
+- aplica os filtros de período do `config.json`;
+- estima bytes processados no BigQuery quando disponível;
+- informa número de consultas previstas;
+- informa número de partições locais previstas;
+- não baixa microdados;
+- não cria Parquets de dados.
+
+Os planos são salvos em `dados/controle`.
+
+No CNPJ, cada snapshot gera uma única consulta BigQuery para todo o conjunto municipal. A divisão por lotes ocorre localmente.
+
+## Uso pelos notebooks
+
+Os notebooks permanecem disponíveis como camada interativa:
+
+1. `00_configurar_municipios.ipynb`
+2. `10_rais.ipynb`
+3. `20_novo_caged.ipynb`
+4. `30_cnpj.ipynb`
+5. `40_validar_e_indexar.ipynb`
+
+A lógica principal fica em `sou_rais.py` e em `scripts/`.
+
+## Uso direto dos scripts
+
+Também é possível executar:
+
+```bash
+python scripts/baixar_rais.py
+python scripts/baixar_novo_caged.py
+python scripts/baixar_cnpj.py
+python scripts/validar_e_indexar.py
+```
+
+## Estrutura de saída
+
+```text
+dados/
+├── processado/
+│   ├── rais/
+│   │   ├── vinculos/
+│   │   └── estabelecimentos/
+│   ├── caged/
+│   └── cnpj/
+└── controle/
+    ├── manifesto_execucoes.csv
+    ├── indice_particoes.csv
+    ├── indice_particoes_fora_padrao.csv
+    ├── plano_rais.csv
+    ├── plano_novo_caged.csv
+    └── plano_cnpj.csv
+```
+
+A pasta `dados/` permanece fora do Git por padrão.
+
+## Controle e integridade
+
+Cada partição criada registra no manifesto:
+
+- base;
+- tipo;
+- lote;
+- período ou snapshot;
+- caminho relativo;
+- número de linhas;
+- municípios ausentes, quando aplicável;
+- SHA-256.
+
+O validador lê os metadados Parquet sem carregar os microdados completos e detecta arquivos vazios, nomes fora do padrão e lotes incompatíveis com a configuração atual.
+
+## Fontes
+
+As consultas usam tabelas públicas da Base dos Dados:
+
+- `basedosdados.br_me_rais.microdados_vinculos`
+- `basedosdados.br_me_rais.microdados_estabelecimentos`
+- `basedosdados.br_me_caged.microdados_movimentacao`
+- `basedosdados.br_me_cnpj.estabelecimentos`
+- `basedosdados.br_me_cnpj.empresas`
+- `basedosdados.br_me_cnpj.simples`
+
+Consulte a documentação oficial do Ministério do Trabalho e Emprego, da Receita Federal e da Base dos Dados antes de interpretar as séries.
+
+## Observações metodológicas
+
+RAIS é uma base anual de estoque e declaração. Novo CAGED é uma base de movimentações mensais e não deve ser emendado automaticamente ao regime histórico anterior a 2020. Os arquivos CNPJ representam snapshots administrativos em datas específicas e não equivalem a uma série anual de emprego ou de empresas ativas sem tratamento metodológico adicional.
+
+## Testes e empacotamento
+
+Execute:
+
+```bash
+pytest -q
+python -m build
+python -m twine check dist/*
+```
+
+O GitHub Actions executa testes unitários, gera `sdist` e wheel e testa a instalação limpa do wheel em ambiente virtual separado.
+
+## Changelog e licença
+
+As mudanças por versão estão documentadas em `CHANGELOG.md`.
+
+O código é distribuído sob a licença MIT. Consulte `LICENSE`.

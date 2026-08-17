@@ -1,0 +1,11 @@
+google-cloud-bigquery
+pandas
+pyarrow
+db-dtypes
+tqdm
+
+[dev]
+pytest
+jupyter
+build
+twine

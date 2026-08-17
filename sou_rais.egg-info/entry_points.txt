@@ -1,0 +1,2 @@
+[console_scripts]
+sou-rais = sou_rais_cli:main

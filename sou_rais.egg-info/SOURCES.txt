@@ -1,0 +1,13 @@
+LICENSE
+README.md
+pyproject.toml
+sou_rais.py
+sou_rais_cli.py
+sou_rais.egg-info/PKG-INFO
+sou_rais.egg-info/SOURCES.txt
+sou_rais.egg-info/dependency_links.txt
+sou_rais.egg-info/entry_points.txt
+sou_rais.egg-info/requires.txt
+sou_rais.egg-info/top_level.txt
+tests/test_cli.py
+tests/test_config.py

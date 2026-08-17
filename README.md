@@ -2,13 +2,15 @@
 
 Notebooks, scripts e uma CLI reproduzível para consulta local de RAIS, Novo CAGED e snapshots do CNPJ a partir das tabelas públicas da Base dos Dados no BigQuery.
 
+Versão atual do código: `0.1.0`.
+
 ## Objetivo
 
 O projeto permite selecionar qualquer conjunto de municípios por código IBGE, escolher períodos de interesse e reproduzir localmente a aquisição, validação e inventário das bases sem depender de Google Drive, Google Colab ou caminhos pessoais.
 
 ## Instalação
 
-Crie um ambiente Python e instale o projeto em modo editável:
+Clone o repositório, crie um ambiente Python e instale o projeto em modo editável:
 
 ```bash
 pip install -e ".[dev]"
@@ -230,12 +232,20 @@ Consulte a documentação oficial do Ministério do Trabalho e Emprego, da Recei
 
 RAIS é uma base anual de estoque e declaração. Novo CAGED é uma base de movimentações mensais e não deve ser emendado automaticamente ao regime histórico anterior a 2020. Os arquivos CNPJ representam snapshots administrativos em datas específicas e não equivalem a uma série anual de emprego ou de empresas ativas sem tratamento metodológico adicional.
 
-## Testes
+## Testes e empacotamento
 
 Execute:
 
 ```bash
 pytest -q
+python -m build
+python -m twine check dist/*
 ```
 
-O GitHub Actions executa os testes automaticamente em pushes e pull requests.
+O GitHub Actions executa testes unitários, gera `sdist` e wheel e testa a instalação limpa do wheel em ambiente virtual separado.
+
+## Changelog e licença
+
+As mudanças por versão estão documentadas em `CHANGELOG.md`.
+
+O código é distribuído sob a licença MIT. Consulte `LICENSE`.

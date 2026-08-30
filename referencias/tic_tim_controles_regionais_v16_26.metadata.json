@@ -9,7 +9,8 @@
     "Os totais são controles de consistência, não indicadores sintéticos de desempenho.",
     "RAIS Vínculos, Novo CAGED, RAIS Estabelecimentos e CNPJ são universos distintos.",
     "A massa salarial observada soma remunerações positivas de dezembro.",
-    "A intensidade aproximada dos fluxos preserva a série publicada e deve ser reconciliada com a definição exata do estoque de referência antes de automatização final.",
+    "A intensidade aproximada dos fluxos foi reconciliada com o Bloco 5: estoque_medio_t = (estoque_RAIS_{t-1} + estoque_RAIS_t) / 2; intensidade_t = ((admissoes_t + desligamentos_t) / 2) / estoque_medio_t.",
+    "A série publicada de intensidade regional de 2020 a 2025 integra o gate de regressão e não deve ser alterada para acomodar novas execuções.",
     "As participações Top 3 e Top 5 foram auditadas diretamente sobre os estoques municipais canônicos nos marcos temporais."
   ],
   "regra_de_uso": "Não alterar os valores para acomodar uma nova execução. Divergências devem gerar investigação de schema, cobertura, filtros ou versão das fontes."

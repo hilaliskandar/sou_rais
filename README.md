@@ -2,7 +2,7 @@
 
 Notebooks, scripts e uma CLI reproduzível para consulta local de RAIS, Novo CAGED e snapshots do CNPJ a partir das tabelas públicas da Base dos Dados no BigQuery.
 
-Versão atual do código: `0.1.0`.
+Versão atual do código: `0.2.0`.
 
 ## Objetivo
 
@@ -18,10 +18,16 @@ Clone o repositório, crie um ambiente Python e instale o projeto em modo editá
 pip install -e ".[dev]"
 ```
 
-Para executar o notebook analítico TIC-TIM, instale também o extra de análise:
+Para executar a camada analítica TIC-TIM:
 
 ```bash
 pip install -e ".[dev,analysis]"
+```
+
+Para mapas municipais com GeoPandas:
+
+```bash
+pip install -e ".[dev,geo]"
 ```
 
 Isso instala também o comando:
@@ -90,83 +96,27 @@ Valores `null` significam utilizar toda a cobertura descoberta na fonte.
 
 O padrão público é `warning`.
 
-## CLI
+## CLI de aquisição
 
 Depois de `pip install -e ".[dev]"`, o fluxo principal pode ser feito sem abrir notebooks.
-
-Verifique a configuração e o ambiente:
 
 ```bash
 sou-rais doctor
 sou-rais config
-```
-
-Planeje toda a aquisição sem baixar microdados:
-
-```bash
 sou-rais plan
-```
-
-Ou por base:
-
-```bash
-sou-rais plan rais
-sou-rais plan caged
-sou-rais plan cnpj
-```
-
-Baixe uma base:
-
-```bash
-sou-rais download rais
-sou-rais download caged
-sou-rais download cnpj
-```
-
-Ou todas em sequência:
-
-```bash
 sou-rais download all
+sou-rais validate
 ```
 
-Também é possível usar dry-run no próprio comando de download:
+Também é possível usar dry-run:
 
 ```bash
 sou-rais download all --dry-run
 ```
 
-Valide e indexe os Parquets locais:
+O dry-run descobre cobertura temporal, aplica filtros, estima bytes, informa consultas/partições previstas e não baixa microdados.
 
-```bash
-sou-rais validate
-```
-
-Ajuda e versão:
-
-```bash
-sou-rais --help
-sou-rais --version
-```
-
-## Dry-run
-
-O dry-run:
-
-- descobre a cobertura temporal disponível;
-- aplica os filtros de período do `config.json`;
-- estima bytes processados no BigQuery quando disponível;
-- informa número de consultas previstas;
-- informa número de partições locais previstas;
-- não baixa microdados;
-- não cria Parquets de dados.
-
-Os planos são salvos em `dados/controle`.
-
-No CNPJ, cada snapshot gera uma única consulta BigQuery para todo o conjunto municipal. A divisão por lotes ocorre localmente.
-
-## Uso pelos notebooks
-
-Os notebooks permanecem disponíveis como camada interativa:
+## Notebooks
 
 1. `00_configurar_municipios.ipynb`
 2. `10_rais.ipynb`
@@ -175,9 +125,9 @@ Os notebooks permanecem disponíveis como camada interativa:
 5. `40_validar_e_indexar.ipynb`
 6. `90_tic_tim_emprego_analise_completa.ipynb`
 
-O notebook `90_tic_tim_emprego_analise_completa.ipynb` é o ponto de entrada para a reprodução do estudo TIC-TIM. Ele parte dos Parquets obtidos pelo próprio repositório e produz a camada de análise em `dados/analise_tic_tim/`.
+O notebook `90_tic_tim_emprego_analise_completa.ipynb` é o ponto de entrada interativo para a reprodução do estudo TIC-TIM.
 
-A lógica analítica reutilizável foi separada em `tic_tim_analysis.py`, com testes unitários próprios. Entre as operações já formalizadas estão QL, HHI, número efetivo de categorias, shift-share, remuneração real, cobertura remuneratória, intensidade aproximada dos fluxos, perfil etário, índice de envelhecimento, gaps remuneratórios e concentração de empregadores.
+A lógica metodológica reutilizável está em `tic_tim_analysis.py`. Entre as operações formalizadas estão estoque, participação regional, QL, HHI, número efetivo, shift-share, remuneração real, cobertura remuneratória, intensidade aproximada dos fluxos, perfil etário, índice de envelhecimento, gaps remuneratórios, referência empírica de escolaridade por CBO, concentração de empregadores e auditoria de equivalência.
 
 ## Reprodução TIC-TIM
 
@@ -191,29 +141,43 @@ sou-rais doctor
 sou-rais plan
 sou-rais download all
 sou-rais validate
+python scripts/analisar_tic_tim.py
 jupyter lab 90_tic_tim_emprego_analise_completa.ipynb
 ```
 
-A janela analítica principal do estudo é 2015-2025. A reprodução deve manter separados os seguintes universos:
+A janela analítica principal é 2015-2025. Devem permanecer separados:
 
 - RAIS Vínculos: estoque e atributos dos vínculos formais ativos;
 - RAIS Estabelecimentos: distribuição do estoque entre estabelecimentos declarantes;
 - Novo CAGED: admissões e desligamentos;
 - CNPJ: fotografias cadastrais, sem interpretação como série de emprego ou demografia empresarial líquida.
 
-As remunerações históricas devem ser deflacionadas para reais de dezembro de 2025 pelo IPCA. Remunerações iguais a zero permanecem no estoque, mas são excluídas de médias, medianas, percentis, massa salarial e gaps remuneratórios. O QL usa como referência o conjunto dos municípios configurados para a análise; no estudo TIC-TIM, o universo canônico é de 30 municípios.
+As remunerações históricas devem ser deflacionadas para reais de dezembro de 2025 pelo IPCA. Remunerações iguais a zero permanecem no estoque, mas são excluídas de médias, medianas, percentis, massa salarial e gaps remuneratórios. O QL usa como referência o conjunto dos municípios configurados; no estudo TIC-TIM, o universo canônico é de 30 municípios.
 
 A documentação metodológica detalhada está em `docs/TIC_TIM_REPRODUCAO.md`.
 
-## Uso direto dos scripts
+## Gates de equivalência
 
-Também é possível executar:
+Quando houver uma tabela canônica publicada em CSV, o gate genérico pode ser executado por:
+
+```bash
+python scripts/validar_equivalencia_tic_tim.py \
+  dados/analise_tic_tim/tabelas/02_trajetoria_2015_2025.csv \
+  referencias/trajetoria_publicada.csv \
+  --chaves id_municipio \
+  --colunas estoque_inicial estoque_final variacao_abs crescimento_pct
+```
+
+O comando termina com erro quando qualquer comparação ultrapassa as tolerâncias informadas. Isso permite usar os entregáveis publicados como testes de regressão do pipeline.
+
+## Uso direto dos scripts
 
 ```bash
 python scripts/baixar_rais.py
 python scripts/baixar_novo_caged.py
 python scripts/baixar_cnpj.py
 python scripts/validar_e_indexar.py
+python scripts/analisar_tic_tim.py
 ```
 
 ## Estrutura de saída
@@ -244,20 +208,7 @@ A pasta `dados/` permanece fora do Git por padrão.
 
 ## Controle e integridade
 
-Cada partição criada registra no manifesto:
-
-- base;
-- tipo;
-- lote;
-- período ou snapshot;
-- caminho relativo;
-- número de linhas;
-- municípios ausentes, quando aplicável;
-- SHA-256.
-
-O validador lê os metadados Parquet sem carregar os microdados completos e detecta arquivos vazios, nomes fora do padrão e lotes incompatíveis com a configuração atual.
-
-A camada TIC-TIM gera ainda uma auditoria de completude e um manifesto SHA-256 dos produtos analíticos.
+Cada partição criada registra base, tipo, lote, período/snapshot, caminho relativo, linhas, municípios ausentes e SHA-256. A camada TIC-TIM gera auditoria de completude e manifesto SHA-256 dos produtos analíticos.
 
 ## Fontes
 
@@ -274,13 +225,11 @@ Consulte a documentação oficial do Ministério do Trabalho e Emprego, da Recei
 
 ## Observações metodológicas
 
-RAIS é uma base anual de estoque e declaração. Novo CAGED é uma base de movimentações mensais e não deve ser emendado automaticamente ao regime histórico anterior a 2020. Os arquivos CNPJ representam snapshots administrativos em datas específicas e não equivalem a uma série anual de emprego ou de empresas ativas sem tratamento metodológico adicional.
+RAIS é estoque anual de vínculos declarados. Novo CAGED é movimentação mensal e não deve ser emendado automaticamente ao regime histórico anterior a 2020. CNPJ é fotografia cadastral e não equivale a série anual de emprego.
 
-QL mede especialização relativa, não competitividade. HHI mede concentração, não vulnerabilidade. Shift-share é decomposição contábil da variação do emprego e não estima causalidade ou produtividade. A intensidade dos fluxos é uma medida aproximada de movimentação e não uma taxa longitudinal de rotatividade individual.
+QL mede especialização relativa, não competitividade. HHI mede concentração, não vulnerabilidade. Shift-share é decomposição contábil e não estima causalidade ou produtividade. A intensidade dos fluxos é aproximação da movimentação relativa, não taxa longitudinal de rotatividade individual.
 
 ## Testes e empacotamento
-
-Execute:
 
 ```bash
 pytest -q
@@ -288,7 +237,7 @@ python -m build
 python -m twine check dist/*
 ```
 
-O GitHub Actions executa testes unitários, gera `sdist` e wheel e testa a instalação limpa do wheel em ambiente virtual separado.
+O GitHub Actions executa testes unitários, gera `sdist` e wheel e testa a instalação limpa do wheel.
 
 ## Changelog e licença
 

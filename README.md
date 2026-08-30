@@ -8,12 +8,20 @@ Versão atual do código: `0.1.0`.
 
 O projeto permite selecionar qualquer conjunto de municípios por código IBGE, escolher períodos de interesse e reproduzir localmente a aquisição, validação e inventário das bases sem depender de Google Drive, Google Colab ou caminhos pessoais.
 
+Além da aquisição, o repositório contém uma camada analítica específica para o estudo TIC-TIM, com indicadores, tabelas, gráficos e mapas reprodutíveis a partir dos microdados adquiridos.
+
 ## Instalação
 
 Clone o repositório, crie um ambiente Python e instale o projeto em modo editável:
 
 ```bash
 pip install -e ".[dev]"
+```
+
+Para executar o notebook analítico TIC-TIM, instale também o extra de análise:
+
+```bash
+pip install -e ".[dev,analysis]"
 ```
 
 Isso instala também o comando:
@@ -165,8 +173,37 @@ Os notebooks permanecem disponíveis como camada interativa:
 3. `20_novo_caged.ipynb`
 4. `30_cnpj.ipynb`
 5. `40_validar_e_indexar.ipynb`
+6. `90_tic_tim_emprego_analise_completa.ipynb`
 
-A lógica principal fica em `sou_rais.py` e em `scripts/`.
+O notebook `90_tic_tim_emprego_analise_completa.ipynb` é o ponto de entrada para a reprodução do estudo TIC-TIM. Ele parte dos Parquets obtidos pelo próprio repositório e produz a camada de análise em `dados/analise_tic_tim/`.
+
+A lógica analítica reutilizável foi separada em `tic_tim_analysis.py`, com testes unitários próprios. Entre as operações já formalizadas estão QL, HHI, número efetivo de categorias, shift-share, remuneração real, cobertura remuneratória, intensidade aproximada dos fluxos, perfil etário, índice de envelhecimento, gaps remuneratórios e concentração de empregadores.
+
+## Reprodução TIC-TIM
+
+Fluxo recomendado:
+
+```bash
+cp municipios.exemplo.csv municipios.csv
+cp config.exemplo.json config.json
+# editar os 30 códigos IBGE e os recortes temporais
+sou-rais doctor
+sou-rais plan
+sou-rais download all
+sou-rais validate
+jupyter lab 90_tic_tim_emprego_analise_completa.ipynb
+```
+
+A janela analítica principal do estudo é 2015-2025. A reprodução deve manter separados os seguintes universos:
+
+- RAIS Vínculos: estoque e atributos dos vínculos formais ativos;
+- RAIS Estabelecimentos: distribuição do estoque entre estabelecimentos declarantes;
+- Novo CAGED: admissões e desligamentos;
+- CNPJ: fotografias cadastrais, sem interpretação como série de emprego ou demografia empresarial líquida.
+
+As remunerações históricas devem ser deflacionadas para reais de dezembro de 2025 pelo IPCA. Remunerações iguais a zero permanecem no estoque, mas são excluídas de médias, medianas, percentis, massa salarial e gaps remuneratórios. O QL usa como referência o conjunto dos municípios configurados para a análise; no estudo TIC-TIM, o universo canônico é de 30 municípios.
+
+A documentação metodológica detalhada está em `docs/TIC_TIM_REPRODUCAO.md`.
 
 ## Uso direto dos scripts
 
@@ -189,6 +226,11 @@ dados/
 │   │   └── estabelecimentos/
 │   ├── caged/
 │   └── cnpj/
+├── analise_tic_tim/
+│   ├── tabelas/
+│   ├── figuras/
+│   ├── mapas/
+│   └── controle/
 └── controle/
     ├── manifesto_execucoes.csv
     ├── indice_particoes.csv
@@ -215,6 +257,8 @@ Cada partição criada registra no manifesto:
 
 O validador lê os metadados Parquet sem carregar os microdados completos e detecta arquivos vazios, nomes fora do padrão e lotes incompatíveis com a configuração atual.
 
+A camada TIC-TIM gera ainda uma auditoria de completude e um manifesto SHA-256 dos produtos analíticos.
+
 ## Fontes
 
 As consultas usam tabelas públicas da Base dos Dados:
@@ -231,6 +275,8 @@ Consulte a documentação oficial do Ministério do Trabalho e Emprego, da Recei
 ## Observações metodológicas
 
 RAIS é uma base anual de estoque e declaração. Novo CAGED é uma base de movimentações mensais e não deve ser emendado automaticamente ao regime histórico anterior a 2020. Os arquivos CNPJ representam snapshots administrativos em datas específicas e não equivalem a uma série anual de emprego ou de empresas ativas sem tratamento metodológico adicional.
+
+QL mede especialização relativa, não competitividade. HHI mede concentração, não vulnerabilidade. Shift-share é decomposição contábil da variação do emprego e não estima causalidade ou produtividade. A intensidade dos fluxos é uma medida aproximada de movimentação e não uma taxa longitudinal de rotatividade individual.
 
 ## Testes e empacotamento
 

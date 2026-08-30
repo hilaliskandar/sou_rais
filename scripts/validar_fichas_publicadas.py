@@ -78,7 +78,7 @@ def main() -> int:
     caged = _ler(args.analise / "12_novo_caged_fluxos.csv")
     idade = _ler(args.analise / "16_perfil_etario.csv")
     sexo = _ler(args.analise / "17_perfil_sexo.csv")
-    top10 = _ler(args.analise / "13_concentracao_top10_empregadores.csv")
+    top10 = _ler(args.analise / "13_concentracao_empregadores.csv")
     massa = _ler(args.analise / "18_massa_salarial.csv")
 
     partes = []
@@ -86,8 +86,6 @@ def main() -> int:
         filtro=lambda x: x[pd.to_numeric(x["ano"], errors="coerce") == 2025]))
     partes.append(_comparar(ref, cresc, "crescimento_2015_2025_pct", "variacao_pct", "crescimento_2015_2025_pct", 0.05, 1e-5))
 
-    # O pipeline deve produzir explicitamente remuneração REAL. Se a coluna ainda for
-    # apenas nominal, o indicador permanece NAO_IMPLEMENTADO em vez de ser comparado.
     remun_col = "mediana_real" if remun is not None and "mediana_real" in remun.columns else "__ausente__"
     partes.append(_comparar(ref, remun, "remuneracao_mediana_real_2025", remun_col,
         "remuneracao_mediana_real_2025", 0.02, 1e-6,
@@ -98,10 +96,9 @@ def main() -> int:
         "massa_salarial_milhoes_2025", 0.06, 1e-5,
         filtro=(lambda x: x[pd.to_numeric(x["ano"], errors="coerce") == 2025]) if massa_col != "__ausente__" else None))
 
-    if caged is not None and "ano" in caged.columns and "saldo" in caged.columns:
-        caged_2025 = caged[pd.to_numeric(caged["ano"], errors="coerce") == 2025].groupby("id_municipio", as_index=False)["saldo"].sum()
-    else:
-        caged_2025 = None
+    caged_2025 = None
+    if caged is not None and {"ano", "saldo"}.issubset(caged.columns):
+        caged_2025 = caged[pd.to_numeric(caged["ano"], errors="coerce") == 2025][["id_municipio", "saldo"]].copy()
     partes.append(_comparar(ref, caged_2025, "saldo_caged_2025", "saldo", "saldo_caged_2025", 0, 0))
 
     idade_col = "idade_mediana" if idade is not None and "idade_mediana" in idade.columns else "__ausente__"
@@ -112,10 +109,9 @@ def main() -> int:
     partes.append(_comparar(ref, sexo, "mulheres_pct_2025", mulheres_col, "mulheres_pct_2025", 0.05, 1e-5,
         filtro=(lambda x: x[pd.to_numeric(x["ano"], errors="coerce") == 2025]) if mulheres_col != "__ausente__" else None))
 
-    top_col = "share_top10" if top10 is not None and "share_top10" in top10.columns else "__ausente__"
+    top_col = "top10_share" if top10 is not None and "top10_share" in top10.columns else "__ausente__"
     top_calc = top10.copy() if top10 is not None else None
     if top_calc is not None and top_col != "__ausente__":
-        # O pipeline guarda participação como fração; a publicação usa porcentagem.
         top_calc["top10_pct"] = pd.to_numeric(top_calc[top_col], errors="coerce") * 100
         top_col = "top10_pct"
     partes.append(_comparar(ref, top_calc, "top10_empregadores_pct_2025", top_col,

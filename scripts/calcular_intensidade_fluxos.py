@@ -71,6 +71,8 @@ def calcular_intensidade(estoque: pd.DataFrame, fluxos: pd.DataFrame) -> pd.Data
         np.nan,
     )
     out["intensidade_fluxos_pct"] = 100 * out["intensidade_fluxos"]
+    # Alias editorial consumido pelas rotinas de mapas/figuras já existentes.
+    out["intensidade_pct"] = out["intensidade_fluxos_pct"]
     out["saldo"] = (
         pd.to_numeric(out["admissoes"], errors="coerce")
         - pd.to_numeric(out["desligamentos"], errors="coerce")
@@ -95,6 +97,7 @@ def agregar_regional(municipal: pd.DataFrame) -> pd.DataFrame:
         np.nan,
     )
     g["intensidade_fluxos_pct"] = 100 * g["intensidade_fluxos"]
+    g["intensidade_pct"] = g["intensidade_fluxos_pct"]
     return g
 
 

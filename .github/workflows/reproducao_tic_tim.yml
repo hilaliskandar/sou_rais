@@ -1,0 +1,116 @@
+name: reproducao-tic-tim
+
+on:
+  workflow_dispatch:
+    inputs:
+      gerar_visuais:
+        description: "Gerar figuras e mapas ao final"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      permitir_nao_implementado:
+        description: "Permitir indicadores ainda não implementados no gate municipal"
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+jobs:
+  reproducao-completa:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      BIGQUERY_PROJECT: ${{ secrets.BIGQUERY_PROJECT }}
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-service-account.json
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Atualiza pip
+        run: python -m pip install --upgrade pip
+
+      - name: Instala projeto com dependências analíticas e geoespaciais
+        run: pip install -e ".[dev,analysis,geo]"
+
+      - name: Valida secrets obrigatórios
+        shell: bash
+        run: |
+          test -n "${BIGQUERY_PROJECT}" || (echo "Secret BIGQUERY_PROJECT ausente" && exit 1)
+          test -n "${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}" || (echo "Secret GCP_SERVICE_ACCOUNT_JSON ausente" && exit 1)
+
+      - name: Materializa credencial GCP
+        shell: bash
+        run: |
+          cat > "$GOOGLE_APPLICATION_CREDENTIALS" <<'EOF'
+          ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
+          EOF
+          chmod 600 "$GOOGLE_APPLICATION_CREDENTIALS"
+
+      - name: Prepara configuração canônica TIC-TIM
+        shell: bash
+        run: |
+          cp municipios.exemplo.csv municipios.csv
+          cp config.exemplo.json config.json
+          python scripts/preparar_config_tic_tim.py
+
+      - name: Diagnóstico e plano de aquisição
+        run: |
+          sou-rais doctor
+          sou-rais config
+          sou-rais plan
+
+      - name: Baixa RAIS, Novo CAGED e CNPJ
+        run: sou-rais download all
+
+      - name: Valida partições e hashes
+        run: sou-rais validate
+
+      - name: Baixa auxiliares analíticos
+        run: python scripts/baixar_auxiliares_tic_tim.py
+
+      - name: Executa análise, intensidade e gates
+        shell: bash
+        run: |
+          ARGS="--sem-visuais"
+          if [ "${{ inputs.permitir_nao_implementado }}" = "true" ]; then
+            ARGS="$ARGS --permitir-nao-implementado"
+          fi
+          python scripts/executar_pipeline_tic_tim.py $ARGS
+
+      - name: Gera figuras e mapas
+        if: ${{ inputs.gerar_visuais == 'true' }}
+        run: |
+          python scripts/gerar_figuras_tic_tim.py
+          python scripts/gerar_mapas_tic_tim.py
+
+      - name: Empacota produtos e controles
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p artifacts
+          if [ -d dados/analise_tic_tim ]; then
+            tar -czf artifacts/tic_tim_analise.tar.gz dados/analise_tic_tim
+          fi
+          if [ -d dados/controle ]; then
+            tar -czf artifacts/tic_tim_controle_aquisicao.tar.gz dados/controle
+          fi
+          cp -f config.json artifacts/config_resolvida.json || true
+          cp -f municipios.csv artifacts/municipios.csv || true
+
+      - name: Publica artefatos de reprodução
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tic-tim-reproducao-${{ github.run_id }}
+          path: artifacts/
+          if-no-files-found: warn
+          retention-days: 30

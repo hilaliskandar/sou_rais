@@ -43,7 +43,7 @@ full = ["matplotlib>=3.7", "geopandas>=0.14", "jupyter"]
 sou-rais = "sou_rais_cli:main"
 
 [tool.setuptools]
-py-modules = ["sou_rais", "sou_rais_cli", "tic_tim_analise"]
+py-modules = ["sou_rais", "sou_rais_cli", "tic_tim_analysis"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

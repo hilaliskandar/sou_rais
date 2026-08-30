@@ -1,7 +1,17 @@
+import importlib.util
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 
-from scripts.calcular_intensidade_fluxos import agregar_regional, calcular_intensidade
+
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "calcular_intensidade_fluxos.py"
+SPEC = importlib.util.spec_from_file_location("calcular_intensidade_fluxos", SCRIPT)
+MOD = importlib.util.module_from_spec(SPEC)
+assert SPEC is not None and SPEC.loader is not None
+SPEC.loader.exec_module(MOD)
+calcular_intensidade = MOD.calcular_intensidade
+agregar_regional = MOD.agregar_regional
 
 
 def test_intensidade_usa_media_estoques_extremos():
@@ -25,6 +35,7 @@ def test_intensidade_usa_media_estoques_extremos():
     assert out["movimentacao_media"] == 55.0
     assert out["intensidade_fluxos"] == 0.5
     assert out["intensidade_fluxos_pct"] == 50.0
+    assert out["intensidade_pct"] == 50.0
 
 
 def test_regressao_regional_2020_caderno_metodologico():

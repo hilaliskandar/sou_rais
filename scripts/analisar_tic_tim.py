@@ -1,28 +1,68 @@
 from __future__ import annotations
 
+import hashlib
+import json
 from pathlib import Path
 
 import pandas as pd
 
-from tic_tim_analise import (
-    AnalisePaths,
-    caged_fluxos,
-    cnpj_fotografia,
-    concentracao_top_n,
-    crescimento_municipal,
-    estrutura_ocupacional,
-    estrutura_setorial_ql,
-    estoque_rais,
-    estoque_regional,
-    faixa_etaria,
-    hhi_setorial,
-    ler_parquets,
-    manifesto_produtos,
-    numero_efetivo_setores,
-    remuneracao_municipal,
-    resumo_categoria,
-    salvar_json,
+from tic_tim_analysis import (
+    concentracao_empregadores,
+    especializacao_principal,
+    estoque_vinculos,
+    hhi,
+    mudanca_participacao_regional,
+    perfil_etario,
+    quociente_locacional,
+    shift_share,
+    trajetoria,
 )
+
+
+def ler_parquets(pasta: Path) -> pd.DataFrame:
+    arquivos = sorted(pasta.rglob("*.parquet")) if pasta.exists() else []
+    if not arquivos:
+        return pd.DataFrame()
+    partes = []
+    for arquivo in arquivos:
+        df = pd.read_parquet(arquivo)
+        df["_arquivo_fonte"] = str(arquivo)
+        partes.append(df)
+    return pd.concat(partes, ignore_index=True)
+
+
+def resolver(df: pd.DataFrame, candidatos: list[str], obrigatoria: bool = True) -> str | None:
+    for c in candidatos:
+        if c in df.columns:
+            return c
+    if obrigatoria:
+        raise KeyError(f"Nenhuma das colunas candidatas foi encontrada: {candidatos}")
+    return None
+
+
+def normalizar_municipio(df: pd.DataFrame) -> pd.DataFrame:
+    if df.empty:
+        return df.copy()
+    out = df.copy()
+    c = resolver(out, ["id_municipio", "municipio", "cod_municipio", "codigo_municipio"])
+    if c != "id_municipio":
+        out = out.rename(columns={c: "id_municipio"})
+    out["id_municipio"] = out["id_municipio"].astype(str).str.replace(r"\.0$", "", regex=True).str.zfill(7)
+    return out
+
+
+def setor2(v: object) -> str:
+    s = "" if pd.isna(v) else str(v)
+    d = "".join(ch for ch in s if ch.isdigit())
+    return d[:2] if len(d) >= 2 else s
+
+
+def sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        for bloco in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(bloco)
+    return h.hexdigest()
 
 
 def salvar(df: pd.DataFrame, path: Path) -> Path:
@@ -33,84 +73,71 @@ def salvar(df: pd.DataFrame, path: Path) -> Path:
 
 def main() -> None:
     root = Path.cwd().resolve()
-    paths = AnalisePaths(root)
-    paths.criar()
+    proc = root / "dados" / "processado"
+    saida = root / "dados" / "analise_tic_tim"
+    tab = saida / "tabelas"
+    ctrl = saida / "controle"
+    tab.mkdir(parents=True, exist_ok=True)
+    ctrl.mkdir(parents=True, exist_ok=True)
 
-    rais_v = ler_parquets(paths.processado / "rais" / "vinculos")
-    caged = ler_parquets(paths.processado / "caged")
-    cnpj = ler_parquets(paths.processado / "cnpj")
+    rais = normalizar_municipio(ler_parquets(proc / "rais" / "vinculos"))
+    if rais.empty:
+        raise RuntimeError("RAIS Vínculos não localizada. Execute `sou-rais download rais` e `sou-rais validate`.")
 
-    if rais_v.empty:
-        raise RuntimeError("Nenhum parquet RAIS de vínculos encontrado. Execute antes `sou-rais download rais` e `sou-rais validate`.")
+    ano_col = resolver(rais, ["ano", "ano_rais"])
+    if ano_col != "ano":
+        rais = rais.rename(columns={ano_col: "ano"})
+    rais["ano"] = pd.to_numeric(rais["ano"], errors="raise").astype(int)
 
     produtos: list[Path] = []
 
-    estoque = estoque_rais(rais_v)
-    produtos.append(salvar(estoque, paths.tabelas / "01_estoque_municipio_ano.csv"))
-    produtos.append(salvar(estoque_regional(estoque), paths.tabelas / "02_estoque_regional_ano.csv"))
-    produtos.append(salvar(crescimento_municipal(estoque), paths.tabelas / "03_crescimento_municipal.csv"))
+    estoque = estoque_vinculos(rais)
+    produtos.append(salvar(estoque, tab / "01_estoque_municipio_ano.csv"))
+    produtos.append(salvar(trajetoria(estoque), tab / "02_trajetoria_2015_2025.csv"))
+    produtos.append(salvar(mudanca_participacao_regional(estoque), tab / "03_mudanca_participacao_regional.csv"))
 
-    estrutura = estrutura_setorial_ql(rais_v)
-    produtos.append(salvar(estrutura, paths.tabelas / "04_estrutura_setorial_ql.csv"))
-    hhi = hhi_setorial(estrutura)
-    produtos.append(salvar(hhi, paths.tabelas / "05_hhi_setorial.csv"))
-    produtos.append(salvar(numero_efetivo_setores(hhi), paths.tabelas / "05b_numero_efetivo_setores.csv"))
-
-    produtos.append(salvar(estrutura_ocupacional(rais_v), paths.tabelas / "06_estrutura_ocupacional.csv"))
-
-    for key, nome in [
-        ("escolaridade", "07_escolaridade.csv"),
-        ("sexo", "08_sexo.csv"),
-        ("raca_cor", "09_raca_cor.csv"),
-    ]:
-        try:
-            produtos.append(salvar(resumo_categoria(rais_v, key), paths.tabelas / nome))
-        except KeyError as e:
-            print(f"AVISO: {e}")
-
-    try:
-        produtos.append(salvar(faixa_etaria(rais_v), paths.tabelas / "10_faixa_etaria.csv"))
-    except KeyError as e:
-        print(f"AVISO: {e}")
-
-    try:
-        produtos.append(salvar(remuneracao_municipal(rais_v), paths.tabelas / "11_remuneracao_municipal.csv"))
-    except KeyError as e:
-        print(f"AVISO: {e}")
-
-    if not caged.empty:
-        produtos.append(salvar(caged_fluxos(caged), paths.tabelas / "12_novo_caged_fluxos.csv"))
-    else:
-        print("AVISO: Novo CAGED não localizado; produto 12 não foi gerado.")
-
-    try:
-        produtos.append(salvar(concentracao_top_n(rais_v, 10), paths.tabelas / "13_concentracao_top10_empregadores.csv"))
-    except KeyError as e:
-        print(f"AVISO: {e}")
-
-    if not cnpj.empty:
-        produtos.append(salvar(cnpj_fotografia(cnpj), paths.tabelas / "14_cnpj_fotografia_cadastral.csv"))
-    else:
-        print("AVISO: CNPJ não localizado; produto 14 não foi gerado.")
-
-    manifest = manifesto_produtos(root, produtos)
-    manifest_path = paths.controle / "manifesto_produtos.csv"
-    manifest.to_csv(manifest_path, index=False)
-
-    salvar_json(
-        paths.controle / "metadados_execucao.json",
-        {
-            "root": str(root),
-            "linhas_rais_vinculos": int(len(rais_v)),
-            "linhas_caged": int(len(caged)),
-            "linhas_cnpj": int(len(cnpj)),
-            "produtos_tabelares": int(len(produtos)),
-            "nota": "RAIS, Novo CAGED e CNPJ são fontes distintas e não são concatenadas em uma série única.",
-        },
+    cnae = resolver(rais, ["cnae_2", "cnae_2_subclasse", "cnae_2_classe", "cnae"])
+    base_setorial = rais[["id_municipio", "ano", cnae]].copy()
+    base_setorial["setor"] = base_setorial[cnae].map(setor2)
+    base_setorial = (
+        base_setorial.groupby(["id_municipio", "ano", "setor"])
+        .size().rename("vinculos").reset_index()
     )
+    ql = quociente_locacional(base_setorial)
+    produtos.append(salvar(ql, tab / "04_ql_setorial.csv"))
+    produtos.append(salvar(especializacao_principal(ql, limiar=1.25), tab / "05_especializacao_principal.csv"))
+    produtos.append(salvar(hhi(base_setorial, "setor"), tab / "06_hhi_setorial.csv"))
+    produtos.append(salvar(shift_share(base_setorial, 2015, 2025), tab / "07_shift_share_2015_2025.csv"))
 
-    print(f"Análise concluída. Produtos em: {paths.saida}")
-    print(manifest.to_string(index=False))
+    idade = resolver(rais, ["idade"], obrigatoria=False)
+    if idade:
+        produtos.append(salvar(perfil_etario(rais, idade=idade), tab / "08_perfil_etario.csv"))
+
+    estab = resolver(rais, ["id_estabelecimento", "cnpj", "cnpj_basico"], obrigatoria=False)
+    if estab:
+        tmp = rais.rename(columns={estab: "id_estabelecimento"}) if estab != "id_estabelecimento" else rais
+        produtos.append(salvar(concentracao_empregadores(tmp), tab / "09_concentracao_empregadores.csv"))
+
+    manifest = pd.DataFrame([
+        {"arquivo": str(p.relative_to(root)), "bytes": p.stat().st_size, "sha256": sha256(p)}
+        for p in produtos
+    ])
+    manifest.to_csv(ctrl / "manifesto_produtos.csv", index=False)
+    (ctrl / "metadados_execucao.json").write_text(
+        json.dumps(
+            {
+                "root": str(root),
+                "linhas_rais": int(len(rais)),
+                "produtos": int(len(produtos)),
+                "janela_principal": [2015, 2025],
+                "nota": "RAIS, Novo CAGED e CNPJ permanecem universos distintos. Este script executa o núcleo RAIS; o notebook 90 orquestra os demais blocos.",
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    print(f"Concluído: {len(produtos)} tabelas em {tab}")
 
 
 if __name__ == "__main__":

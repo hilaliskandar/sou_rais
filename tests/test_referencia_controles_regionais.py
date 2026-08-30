@@ -34,6 +34,13 @@ def test_saldo_reconcilia_com_fluxos():
     assert adm - des == saldo
 
 
+def test_intensidade_fluxos_regional_serie_publicada():
+    df = carregar()
+    esperado = {2020: 36.0, 2021: 45.6, 2022: 49.1, 2023: 47.9, 2024: 51.9, 2025: 53.0}
+    for ano, pct in esperado.items():
+        assert valor(df, "intensidade_fluxos_regional", ano) == pct
+
+
 def test_cnpj_snapshot_final():
     df = carregar()
     ativos = valor(df, "cnpjs_ativos", "2026-01-11")

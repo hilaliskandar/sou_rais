@@ -1,31 +1,24 @@
 # Changelog
 
-Todas as mudanças relevantes deste projeto serão documentadas neste arquivo.
+Todas as mudanças relevantes deste projeto são documentadas neste arquivo.
 
-O formato segue, em linhas gerais, Keep a Changelog e o versionamento segue Semantic Versioning.
-
-## [0.1.0] - 2026-08-17
+## [Unreleased]
 
 ### Adicionado
+- Notebook mestre `90_tic_tim_emprego_analise_completa.ipynb` para reprodução da análise TIC-TIM a partir das bases adquiridas pelo próprio repositório.
+- Módulo `tic_tim_analysis.py` com fórmulas canônicas de QL, HHI, shift-share, remuneração real, intensidade de fluxos, perfil etário, gaps remuneratórios, referência empírica de escolaridade por CBO e concentração de empregadores.
+- Testes unitários sintéticos para os principais indicadores TIC-TIM.
+- Protocolo `docs/TIC_TIM_REPRODUCAO.md` com princípios, fórmulas, produtos mínimos e gates de equivalência.
+- Extra opcional `analysis` com NumPy, Matplotlib e GeoPandas.
 
-- aquisição reproduzível de RAIS vínculos e estabelecimentos por código IBGE municipal;
-- aquisição de microdados do Novo CAGED por competência;
-- aquisição otimizada de snapshots do CNPJ, com uma consulta BigQuery por snapshot e divisão local em lotes;
-- configuração por `municipios.csv`, lista inline e `config.json`;
-- seleção opcional de períodos para RAIS, Novo CAGED e CNPJ;
-- execução incremental com reaproveitamento de Parquets existentes;
-- gravação atômica em Parquet com compressão Snappy;
-- manifesto de execução com contagem de linhas, ausências municipais e SHA-256;
-- validação municipal configurável em `strict`, `warning` e `off`;
-- modo `dry-run` com estimativa de bytes processados e planejamento de consultas;
-- validador e índice local de partições;
-- CLI unificada `sou-rais`;
-- notebooks finos para uso interativo;
-- testes automatizados em GitHub Actions;
-- documentação para execução local sem Google Drive ou Google Colab.
+## [0.1.0]
 
-### Notas metodológicas
-
-- RAIS é tratada como base anual de estoque e declaração;
-- Novo CAGED permanece separado de regimes históricos anteriores a 2020;
-- CNPJ é tratado como sequência de snapshots administrativos e não como série anual de emprego.
+### Adicionado
+- CLI `sou-rais` para planejar, baixar e validar RAIS, Novo CAGED e CNPJ.
+- Planejamento/dry-run de consultas e estimativa de bytes no BigQuery.
+- Validação configurável de municípios (`strict`, `warning`, `off`).
+- Manifesto de execuções com SHA-256.
+- Índice de partições Parquet e detecção de arquivos fora do padrão.
+- Notebooks interativos de aquisição e validação.
+- Scripts equivalentes para execução sem notebook.
+- Testes, build de pacote e GitHub Actions.

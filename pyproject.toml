@@ -36,8 +36,8 @@ Changelog = "https://github.com/hilaliskandar/sou_rais/blob/main/CHANGELOG.md"
 [project.optional-dependencies]
 dev = ["pytest", "jupyter", "build", "twine"]
 analysis = ["matplotlib>=3.7"]
-geo = ["matplotlib>=3.7", "geopandas>=0.14"]
-full = ["matplotlib>=3.7", "geopandas>=0.14", "jupyter"]
+geo = ["matplotlib>=3.7", "geopandas>=0.14", "geobr"]
+full = ["matplotlib>=3.7", "geopandas>=0.14", "geobr", "jupyter"]
 
 [project.scripts]
 sou-rais = "sou_rais_cli:main"

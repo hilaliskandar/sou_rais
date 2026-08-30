@@ -3,8 +3,9 @@ from __future__ import annotations
 """Executa a cadeia reprodutível TIC-TIM em ordem dependente.
 
 A aquisição de dados é deliberadamente separada. Este orquestrador parte de `dados/processado`
-e executa análise, intensidade de fluxos, gates e produtos visuais. Mapas dependem da malha
-auxiliar; figuras/mapas podem ser desabilitados para execução de validação tabular.
+e executa análise, intensidade de fluxos, gates regionais/municipais e produtos visuais.
+Mapas dependem da malha auxiliar; figuras/mapas podem ser desabilitados para execução de
+validação exclusivamente tabular.
 """
 
 import argparse
@@ -31,7 +32,7 @@ def main() -> None:
     ap.add_argument(
         "--permitir-nao-implementado",
         action="store_true",
-        help="Permite que o gate das fichas termine com indicadores ainda não implementados.",
+        help="Permite que os gates terminem com indicadores ainda não implementados.",
     )
     args = ap.parse_args()
 
@@ -39,6 +40,7 @@ def main() -> None:
     executar("calcular_intensidade_fluxos.py")
 
     gate_args = ["--nao-falhar-por-nao-implementado"] if args.permitir_nao_implementado else []
+    executar("validar_controles_regionais.py", *gate_args)
     executar("validar_fichas_publicadas.py", *gate_args)
 
     if not args.sem_visuais:

@@ -1,0 +1,29 @@
+indicador,periodo,valor,unidade,fonte_nota
+estoque_formal,2025,1632887,vinculos,controle canônico da matriz municipal
+massa_salarial_observada,2025,7679433839.16,BRL_dez_2025,soma das remunerações positivas de dezembro
+admissoes_novo_caged,2025,866560,movimentacoes,controle canônico do Bloco 5
+desligamentos_novo_caged,2025,845332,movimentacoes,controle canônico do Bloco 5
+saldo_novo_caged,2025,21228,vinculos,admissões menos desligamentos
+empregadores_positivos_rais,2025,89424,estabelecimentos,RAIS Estabelecimentos com estoque positivo
+cnpjs_ativos,2026-01-11,772968,cnpjs,fotografia cadastral final
+cnpjs_mei_ativos,2026-01-11,337789,cnpjs,entre CNPJs ativos
+cnpjs_mei_ativos_pct,2026-01-11,43.7003,percentual,entre CNPJs ativos
+cnpjs_simples_ativos,2026-01-11,538191,cnpjs,entre CNPJs ativos
+cnpjs_simples_ativos_pct,2026-01-11,69.6266,percentual,entre CNPJs ativos
+crescimento_liquido_estoque,2015-2025,312298,vinculos,controle canônico citado no Bloco 3
+top3_participacao,2015,50.62,percentual,participação dos três maiores mercados
+top3_participacao,2019,49.78,percentual,participação dos três maiores mercados
+top3_participacao,2020,49.03,percentual,participação dos três maiores mercados
+top3_participacao,2022,49.08,percentual,participação dos três maiores mercados
+top3_participacao,2025,48.58,percentual,participação dos três maiores mercados
+top5_participacao,2015,60.36,percentual,participação dos cinco maiores mercados
+top5_participacao,2019,59.57,percentual,participação dos cinco maiores mercados
+top5_participacao,2020,58.91,percentual,participação dos cinco maiores mercados
+top5_participacao,2022,59.01,percentual,participação dos cinco maiores mercados
+top5_participacao,2025,58.74,percentual,participação dos cinco maiores mercados
+intensidade_fluxos_regional,2020,36.0,percentual,intensidade aproximada
+intensidade_fluxos_regional,2021,45.6,percentual,intensidade aproximada
+intensidade_fluxos_regional,2022,49.1,percentual,intensidade aproximada
+intensidade_fluxos_regional,2023,47.9,percentual,intensidade aproximada
+intensidade_fluxos_regional,2024,51.9,percentual,intensidade aproximada
+intensidade_fluxos_regional,2025,53.0,percentual,intensidade aproximada

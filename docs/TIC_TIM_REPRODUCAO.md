@@ -200,6 +200,16 @@ Para cada município, comparar ao menos:
 - cinco maiores CNAE e respectivos QL;
 - cinco maiores famílias CBO e respectivos QL.
 
+A primeira referência congelada desse gate é `referencias/tic_tim_fichas_v2_7_quadro1.csv`, extraída do documento público de trabalho “Fichas Municipais Canônicas — Emprego e Estrutura Econômica TIC–TIM — 30 municípios — v2.7 revisão textual integral”. O arquivo `referencias/tic_tim_fichas_v2_7_quadro1.metadata.json` registra a proveniência e as unidades. O caso de Caieiras preserva `n.d.` para Top 10 como valor ausente, e não como zero.
+
+A validação específica é executada por:
+
+```bash
+python scripts/validar_fichas_publicadas.py
+```
+
+O script distingue `OK`, `DIVERGENTE`, `NAO_IMPLEMENTADO` e `NAO_PUBLICADO`. Um indicador não implementado não pode ser tratado como equivalente por ausência de comparação.
+
 ### Gate F — mapas
 
 - todos os 30 municípios presentes;
@@ -216,5 +226,7 @@ A territorialização intraurbana não deve ser misturada à reprodução munici
 ## 9. Status atual da implementação
 
 O arquivo `tic_tim_analysis.py` contém o núcleo das fórmulas canônicas e `tests/test_tic_tim_analysis.py` contém testes unitários sintéticos. O notebook `90_tic_tim_emprego_analise_completa.ipynb` constitui o orquestrador inicial.
+
+A referência do Quadro 1 das fichas v2.7 já está congelada no repositório e possui teste estrutural próprio em `tests/test_referencia_fichas_v2_7.py`. Ainda permanecem por implementar ou reconciliar, no pipeline empírico, a remuneração real completa com IPCA, a massa salarial, os perfis etário e de sexo em tabelas finais, a consolidação anual do Novo CAGED e as referências detalhadas de CNAE/CBO.
 
 O pipeline somente deve ser declarado equivalente à publicação após executar os gates contra os valores canônicos dos entregáveis finais.

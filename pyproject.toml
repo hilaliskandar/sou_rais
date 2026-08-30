@@ -35,12 +35,13 @@ Changelog = "https://github.com/hilaliskandar/sou_rais/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = ["pytest", "jupyter", "build", "twine"]
+analysis = ["numpy", "matplotlib", "geopandas"]
 
 [project.scripts]
 sou-rais = "sou_rais_cli:main"
 
 [tool.setuptools]
-py-modules = ["sou_rais", "sou_rais_cli"]
+py-modules = ["sou_rais", "sou_rais_cli", "tic_tim_analysis"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

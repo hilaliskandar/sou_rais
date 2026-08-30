@@ -3,5 +3,5 @@ pandas
 pyarrow
 db-dtypes
 tqdm
-jupyter
-pytest
+numpy
+matplotlib

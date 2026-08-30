@@ -1,0 +1,27 @@
+{
+  "titulo": "Fichas Municipais Canônicas — Emprego e Estrutura Econômica TIC–TIM — 30 municípios — v2.7 revisão textual integral",
+  "drive_file_id": "1ImvEaV9Lb1PpwIxfFPIfpwkjkcsLwU00Sz-aMHGV7HQ",
+  "drive_url": "https://docs.google.com/document/d/1ImvEaV9Lb1PpwIxfFPIfpwkjkcsLwU00Sz-aMHGV7HQ/edit",
+  "versao_fonte": "v2.7",
+  "data_extracao_referencia": "2026-08-30",
+  "escopo": "Quadro 1 de indicadores selecionados dos 30 municípios",
+  "unidades": {
+    "estoque_2025": "vínculos formais ativos em 31/12/2025",
+    "crescimento_2015_2025_pct": "porcentagem",
+    "remuneracao_mediana_real_2025": "R$ de dezembro de 2025",
+    "massa_salarial_milhoes_2025": "R$ milhões; Campinas = 2618,0 milhões",
+    "saldo_caged_2025": "vínculos; admissões menos desligamentos no Novo CAGED",
+    "idade_mediana_2025": "anos",
+    "mulheres_pct_2025": "porcentagem dos vínculos",
+    "top10_empregadores_pct_2025": "porcentagem dos vínculos; Caieiras publicado como n.d."
+  },
+  "notas_metodologicas_da_fonte": [
+    "RAIS, Novo CAGED e CNPJ são universos distintos.",
+    "A remuneração principal corresponde à mediana real de dezembro de 2025.",
+    "Diferenças remuneratórias por sexo usam medianas; por raça/cor, as fichas publicadas usam médias dos vínculos com raça/cor identificada.",
+    "QL, HHI e demais indicadores são descritivos.",
+    "A passagem 2022–2023 requer cautela de comparabilidade administrativa em variáveis assinaladas nas fichas.",
+    "As fichas não constituem ranking nem índice sintético."
+  ],
+  "regra_de_uso": "Este arquivo é referência de regressão da publicação. Alterações exigem justificativa documental e nova versão, nunca correção silenciosa para acomodar resultados recalculados."
+}

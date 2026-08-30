@@ -1,0 +1,17 @@
+{
+  "titulo": "Caderno Metodológico — Emprego e Estrutura Econômica TIC–TIM v16.26 — CONGELADO — memória interna",
+  "drive_file_id": "1XwGbOjvgmVwq5J4J9DPttgNXz6KT92ezPzIduaqlLEA",
+  "drive_url": "https://docs.google.com/document/d/1XwGbOjvgmVwq5J4J9DPttgNXz6KT92ezPzIduaqlLEA/edit",
+  "versao_fonte": "v16.26",
+  "data_extracao_referencia": "2026-08-30",
+  "finalidade": "Controles agregados para gates de regressão do pipeline reproduzível",
+  "observacoes": [
+    "Os totais são controles de consistência, não indicadores sintéticos de desempenho.",
+    "RAIS Vínculos, Novo CAGED, RAIS Estabelecimentos e CNPJ são universos distintos.",
+    "A massa salarial observada soma remunerações positivas de dezembro.",
+    "A intensidade aproximada dos fluxos foi reconciliada com o Bloco 5: estoque_medio_t = (estoque_RAIS_{t-1} + estoque_RAIS_t) / 2; intensidade_t = ((admissoes_t + desligamentos_t) / 2) / estoque_medio_t.",
+    "A série publicada de intensidade regional de 2020 a 2025 integra o gate de regressão e não deve ser alterada para acomodar novas execuções.",
+    "As participações Top 3 e Top 5 foram auditadas diretamente sobre os estoques municipais canônicos nos marcos temporais."
+  ],
+  "regra_de_uso": "Não alterar os valores para acomodar uma nova execução. Divergências devem gerar investigação de schema, cobertura, filtros ou versão das fontes."
+}

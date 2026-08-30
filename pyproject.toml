@@ -4,12 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "sou-rais"
-version = "0.1.0"
-description = "Aquisição reproduzível de RAIS, Novo CAGED e snapshots do CNPJ por municípios"
+version = "0.2.0"
+description = "Aquisição e análise reprodutível de RAIS, Novo CAGED e snapshots do CNPJ por municípios"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {file = "LICENSE"}
-keywords = ["RAIS", "CAGED", "CNPJ", "BigQuery", "Brasil", "mercado de trabalho", "dados públicos"]
+keywords = ["RAIS", "CAGED", "CNPJ", "BigQuery", "Brasil", "mercado de trabalho", "dados públicos", "TIC-TIM"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "License :: OSI Approved :: MIT License",
@@ -35,12 +35,15 @@ Changelog = "https://github.com/hilaliskandar/sou_rais/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = ["pytest", "jupyter", "build", "twine"]
+analysis = ["matplotlib>=3.7"]
+geo = ["matplotlib>=3.7", "geopandas>=0.14", "geobr"]
+full = ["matplotlib>=3.7", "geopandas>=0.14", "geobr", "jupyter"]
 
 [project.scripts]
 sou-rais = "sou_rais_cli:main"
 
 [tool.setuptools]
-py-modules = ["sou_rais", "sou_rais_cli"]
+py-modules = ["sou_rais", "sou_rais_cli", "tic_tim_analysis"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

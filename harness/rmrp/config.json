@@ -1,0 +1,13 @@
+{
+  "arquivo_municipios": "municipios.csv",
+  "lote_tamanho": 5,
+  "ano_inicial": 2015,
+  "ano_final": 2025,
+  "competencia_inicial": "2020-01",
+  "competencia_final": "2025-12",
+  "snapshot_inicial": null,
+  "snapshot_final": "2026-01-11",
+  "estimar_custo": true,
+  "sobrescrever": false,
+  "validacao_municipios": "strict"
+}
